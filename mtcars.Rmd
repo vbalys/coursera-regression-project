@@ -1,0 +1,161 @@
+---
+title: "Analysis of transmission type influence on MPG"
+output: 
+    pdf_document:
+        keep_tex: true
+fontsize: 10pt
+geometry: margin=0.5in
+---
+
+# Summary
+
+In this report, `mtcars` data set was analysed in order to explore the relationship between a set of variables and miles per gallon (MPG). In particular, influence of transmission type (automatic vs manual) was considered. The analysis was performed by fitting linear models for MPG. Analysis showed that there is a significant difference in MPG between cars with automatic and manual transmissions. However, the best linear model for MPG as outcome did not include transmission type as regressor. More specifically, having car weight and number of cylinders fixed, transmission type does not influence MPG. [Report was prepared with `knitr`. Source code may be found at `https://github.com/vbalys/coursera-regression-project`].
+
+# Data
+
+```{r echo=FALSE}
+library(knitr)
+opts_chunk$set(results = 'hide', echo = FALSE, message = FALSE)
+```
+
+```{r}
+data(mtcars)
+str(mtcars)
+head(mtcars)
+```
+
+The `mtcars` data set consists of 32 observations of 11 variables. `mpg` is miles per galon - outcome that we are modeling, and `am` is transmission type (`0` - automatic, `1` - manual) - variable of our interest. The remaining 9 variables are possible regressors for a model explaining `mpg` values. Fig. 1 in the Appendix summarises dependencies between variables. 
+
+Boxplots in Fig. 2 suggest that there is a difference in MPG between transmission types. Indeed, t test confirms that difference between means (24.39 vs 17.15) is significant (`p = 0.001374`). However, this does not necessarily mean that difference in MPG is actually related to transmission type. It is possible that we observe a result of confounding factors that are correlated both with MPG and transmission type. To answer the questions of this research, we have to build linear model for MPG. And only then we will find out if there is a way to quantify influence of transmission type.
+
+```{r}
+t.test(mtcars$mpg[mtcars$am==1], mtcars$mpg[mtcars$am==0])
+```
+
+# Analysis
+
+Let us first start with a simplistic model where MPG is explained only by transmission type (`mpg ~ am`). It is immediately obvious that this model is underspecified. Adjusted R-squared ($R^2_{adj}$) value is only 0.33, while residuals vs. fitted values plot in Fig. 3 does not show the expected normality of residuals. This comes as no surprise as transmission type is a factor taking only two values, therefore model can predict only two values (means of MPG for each transmission type).
+
+```{r}
+fit_am <- lm(mpg ~ am, data=mtcars)
+summary(fit_am)
+```
+
+Another candidate is a model that uses all variables as predictors (`mpg ~ .`). In this case, we get overspecified model. Even though $R^2_{adj}=0.8$ and residuals vs. fitted values plot in Fig. 4 is much better, none of the coefficients are significant. Clearly, we have included too much predictors that in various ways correlate with each other and thus cancel each other out. 
+
+```{r results='markup'}
+fit_all <- lm(mpg ~ ., data=mtcars)
+summary(fit_all)$coef
+```
+
+Now we have to find a model in between these two extreme ones that would reasonably explain variation of MPG, have significant coefficients and approximately normal residuals. We are including transmission type `am` as predictor by default, because we are looking for its influence. For the remaining 9 variables there are 512 ($2^9$) combinations of including/excluding any of them - clearly too much to check all of them.
+
+Let us first start with a "reasonable" model which we will then try to improve. If we think from a mechanistical point of view, we can come up with some clear candidates for important predictors. Weight (`wt`) is obviously a factor to consider when talking about MPG. Acceleration (`qsec`) is itself an outcome of car design choices, and using it to predict MPG would be not logical. Similarly, horsepower (`hp`) is a result of other factors, so we choose to not include it in the model. Number of cylinders (`cyl`) and engine displacement (`disp`) are highly related (indeed, correlation is 0.9) to each other and probably interchangeable, therefore we choose to include only one of them - `cyl` which is factor variable with three levels. The remaining ones (rear axle ratio `drat`, engine type `vs`, number of forward gears `gear` and number of carburetors `carb`) are rather obscure ones, therefore we leave them out from the model. So, we start with initial model `mpg ~ am + wt + cyl`.
+
+```{r}
+cor(mtcars)
+```
+
+```{r}
+fit_int <- lm(mpg ~ am + wt + cyl, data=mtcars)
+summary(fit_int)
+```
+
+The resulting linear regression model has significant coefficients for `wt` and `cyl`, $R^2_{adj}=0.81$, and residuals vs fitted values plot in Fig. 4 looks pretty good with no obvious patterns or assymetry, but with a couple of possible outliers. As coefficient for `am` is not significant ($p=0.89$), we run nested model tests with ANOVA to check which of variables are needed. 
+
+
+```{r results='markup'}
+fit_1 <- lm(mpg ~ wt, data=mtcars)
+fit_2 <- update(fit_1, mpg ~ wt + cyl)
+fit_3 <- update(fit_2, mpg ~ wt + cyl + am)
+anova(fit_1, fit_2, fit_3)
+```
+
+We get that we improve model by adding `cyl` variable, but adding `am` does not yield significant improvement. Therefore, we get the final model `mpg ~ wt + cyl`. 
+
+```{r results='markup'}
+fit_wtcyl <- lm(mpg ~ wt + cyl, data=mtcars)
+summary(fit_wtcyl)
+```
+
+Finally, we run some diagnostics for the final model (see the last figure in the Appendix). Both from diagnostic plots and calculated `PRESS = resid / (1 - hatvalues)` values we see that `Toyota Corolla`, `Fiat 128` and `Chrysler Imperial` are outliers. This does not mean that there is something wrong with the data, simply MPG for these cars are not correctly explained by our model.
+
+
+```{r}
+fit_wtcyl <- lm(mpg ~ wt + cyl, data=mtcars)
+sort(resid(fit_wtcyl)/(1-hatvalues(fit_wtcyl)))
+```
+
+# Conclusions
+
+1. There is a significant difference in MPG depending on transmission type. Cars with automatic tranmission have lower MPG than cars with manual transmission.
+
+2. The best linear model for MPG that we managed to come up did not include transmission type as a predictor. This model did include car weight and number of cylinders as regressors. It is highly possible that transmission exerts its influence via car weight. 
+
+3. Without linear model with transmission type as a regressor there is no way to quantify its influence on MPG.
+
+# Appendix
+
+```{r fig.height=7, fig.width=7}
+require(graphics)
+pairs(
+    mtcars, 
+    main='Fig. 1. Scatterplots for all variable pairs', 
+    lower.panel=NULL, 
+    pch='.',
+)
+```
+
+```{r fig.height=2, fig.width=7}
+library(ggplot2)
+ggplot(mtcars, aes(factor(am), mpg)) +
+    geom_boxplot() +
+    coord_flip() +
+    scale_x_discrete(
+        breaks=c("0", "1"),
+        labels=c("Auto", "Manual")
+    ) +
+    labs(
+        title='Fig. 2. MPG for transmission types',
+        x=''
+    )
+```
+
+```{r}
+library(grid)
+g1 <- ggplot(data.frame(x=predict(fit_am), y=resid(fit_am)), aes(x, y)) +
+    geom_point() +
+    geom_hline(yintercept=0) + 
+    labs(
+        title='Fig. 3. Res. vs fitted (mpg ~ am)',
+        x='Fitted (mpg)',
+        y='Residuals'
+    )
+g2 <- ggplot(data.frame(x=predict(fit_all), y=resid(fit_all)), aes(x, y)) +
+    geom_point() +
+    geom_hline(yintercept=0) + 
+    labs(
+        title='Fig. 4. Res. vs fitted (mpg ~ .)',
+        x='Fitted (mpg)',
+        y='Residuals'
+    )
+pushViewport(viewport(layout = grid.layout(1, 2)))
+print(g1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(g2, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+```
+
+```{r}
+ggplot(data.frame(x=predict(fit_int), y=resid(fit_int)), aes(x, y)) +
+    geom_point() +
+    geom_hline(yintercept=0) + 
+    labs(
+        title='Fig. 5. Res. vs fitted (mpg ~ am + wt + cyl)',
+        x='Fitted (mpg)',
+        y='Residuals'
+    )
+```
+
+```{r fig.width=4, fig.height=4}
+require(stats)
+plot(fit_wtcyl)
+```

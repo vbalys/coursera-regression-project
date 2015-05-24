@@ -1,0 +1,265 @@
+\documentclass[10pt,]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+% Set line spacing
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+    \usepackage{xltxtra,xunicode}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Mapping=tex-text,Scale=MatchLowercase}
+  \newcommand{\euro}{€}
+\fi
+% use microtype if available
+\IfFileExists{microtype.sty}{\usepackage{microtype}}{}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{graphicx}
+% Redefine \includegraphics so that, unless explicit options are
+% given, the image width will not exceed the width of the page.
+% Images get their normal width if they fit onto the page, but
+% are scaled down if they would overflow the margins.
+\makeatletter
+\def\ScaleIfNeeded{%
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+\let\Oldincludegraphics\includegraphics
+{%
+ \catcode`\@=11\relax%
+ \gdef\includegraphics{\@ifnextchar[{\Oldincludegraphics}{\Oldincludegraphics[width=\ScaleIfNeeded]}}%
+}%
+\ifxetex
+  \usepackage[setpagesize=false, % page size defined by xetex
+              unicode=false, % unicode breaks when used with xetex
+              xetex]{hyperref}
+\else
+  \usepackage[unicode=true]{hyperref}
+\fi
+\hypersetup{breaklinks=true,
+            bookmarks=true,
+            pdfauthor={},
+            pdftitle={Analysis of transmission type influence on MPG},
+            colorlinks=true,
+            citecolor=blue,
+            urlcolor=blue,
+            linkcolor=magenta,
+            pdfborder={0 0 0}}
+\urlstyle{same}  % don't use monospace font for urls
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\setcounter{secnumdepth}{0}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+\setlength{\droptitle}{-2em}
+  \title{Analysis of transmission type influence on MPG}
+  \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+  \author{}
+  \preauthor{}\postauthor{}
+  \date{}
+  \predate{}\postdate{}
+
+
+
+
+\begin{document}
+
+\maketitle
+
+
+\section{Summary}\label{summary}
+
+In this report, \texttt{mtcars} data set was analysed in order to
+explore the relationship between a set of variables and miles per gallon
+(MPG). In particular, influence of transmission type (automatic vs
+manual) was considered. The analysis was performed by fitting linear
+models for MPG. Analysis showed that there is a significant difference
+in MPG between cars with automatic and manual transmissions. However,
+the best linear model for MPG as outcome did not include transmission
+type as regressor. More specifically, having car weight and number of
+cylinders fixed, transmission type does not influence MPG. {[}Report was
+prepared with \texttt{knitr}. Source code may be found at
+\texttt{https://github.com/vbalys/coursera-regression-project}{]}.
+
+\section{Data}\label{data}
+
+The \texttt{mtcars} data set consists of 32 observations of 11
+variables. \texttt{mpg} is miles per galon - outcome that we are
+modeling, and \texttt{am} is transmission type (\texttt{0} - automatic,
+\texttt{1} - manual) - variable of our interest. The remaining 9
+variables are possible regressors for a model explaining \texttt{mpg}
+values. Fig. 1 in the Appendix summarises dependencies between
+variables.
+
+Boxplots in Fig. 2 suggest that there is a difference in MPG between
+transmission types. Indeed, t test confirms that difference between
+means (24.39 vs 17.15) is significant (\texttt{p = 0.001374}). However,
+this does not necessarily mean that difference in MPG is actually
+related to transmission type. It is possible that we observe a result of
+confounding factors that are correlated both with MPG and transmission
+type. To answer the questions of this research, we have to build linear
+model for MPG. And only then we will find out if there is a way to
+quantify influence of transmission type.
+
+\section{Analysis}\label{analysis}
+
+Let us first start with a simplistic model where MPG is explained only
+by transmission type (\texttt{mpg \textasciitilde{} am}). It is
+immediately obvious that this model is underspecified. Adjusted
+R-squared ($R^2_{adj}$) value is only 0.33, while residuals vs.~fitted
+values plot in Fig. 3 does not show the expected normality of residuals.
+This comes as no surprise as transmission type is a factor taking only
+two values, therefore model can predict only two values (means of MPG
+for each transmission type).
+
+Another candidate is a model that uses all variables as predictors
+(\texttt{mpg \textasciitilde{} .}). In this case, we get overspecified
+model. Even though $R^2_{adj}=0.8$ and residuals vs.~fitted values plot
+in Fig. 4 is much better, none of the coefficients are significant.
+Clearly, we have included too much predictors that in various ways
+correlate with each other and thus cancel each other out.
+
+\begin{verbatim}
+##                Estimate  Std. Error    t value   Pr(>|t|)
+## (Intercept) 12.30337416 18.71788443  0.6573058 0.51812440
+## cyl         -0.11144048  1.04502336 -0.1066392 0.91608738
+## disp         0.01333524  0.01785750  0.7467585 0.46348865
+## hp          -0.02148212  0.02176858 -0.9868407 0.33495531
+## drat         0.78711097  1.63537307  0.4813036 0.63527790
+## wt          -3.71530393  1.89441430 -1.9611887 0.06325215
+## qsec         0.82104075  0.73084480  1.1234133 0.27394127
+## vs           0.31776281  2.10450861  0.1509915 0.88142347
+## am           2.52022689  2.05665055  1.2254035 0.23398971
+## gear         0.65541302  1.49325996  0.4389142 0.66520643
+## carb        -0.19941925  0.82875250 -0.2406258 0.81217871
+\end{verbatim}
+
+Now we have to find a model in between these two extreme ones that would
+reasonably explain variation of MPG, have significant coefficients and
+approximately normal residuals. We are including transmission type
+\texttt{am} as predictor by default, because we are looking for its
+influence. For the remaining 9 variables there are 512 ($2^9$)
+combinations of including/excluding any of them - clearly too much to
+check all of them.
+
+Let us first start with a ``reasonable'' model which we will then try to
+improve. If we think from a mechanistical point of view, we can come up
+with some clear candidates for important predictors. Weight
+(\texttt{wt}) is obviously a factor to consider when talking about MPG.
+Acceleration (\texttt{qsec}) is itself an outcome of car design choices,
+and using it to predict MPG would be not logical. Similarly, horsepower
+(\texttt{hp}) is a result of other factors, so we choose to not include
+it in the model. Number of cylinders (\texttt{cyl}) and engine
+displacement (\texttt{disp}) are highly related (indeed, correlation is
+0.9) to each other and probably interchangeable, therefore we choose to
+include only one of them - \texttt{cyl} which is factor variable with
+three levels. The remaining ones (rear axle ratio \texttt{drat}, engine
+type \texttt{vs}, number of forward gears \texttt{gear} and number of
+carburetors \texttt{carb}) are rather obscure ones, therefore we leave
+them out from the model. So, we start with initial model
+\texttt{mpg \textasciitilde{} am + wt + cyl}.
+
+The resulting linear regression model has significant coefficients for
+\texttt{wt} and \texttt{cyl}, $R^2_{adj}=0.81$, and residuals vs fitted
+values plot in Fig. 4 looks pretty good with no obvious patterns or
+assymetry, but with a couple of possible outliers. As coefficient for
+\texttt{am} is not significant ($p=0.89$), we run nested model tests
+with ANOVA to check which of variables are needed.
+
+\begin{verbatim}
+## Analysis of Variance Table
+## 
+## Model 1: mpg ~ wt
+## Model 2: mpg ~ wt + cyl
+## Model 3: mpg ~ wt + cyl + am
+##   Res.Df    RSS Df Sum of Sq       F Pr(>F)   
+## 1     30 278.32                               
+## 2     29 191.17  1    87.150 12.7728 0.0013 **
+## 3     28 191.05  1     0.125  0.0183 0.8933   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+\end{verbatim}
+
+We get that we improve model by adding \texttt{cyl} variable, but adding
+\texttt{am} does not yield significant improvement. Therefore, we get
+the final model \texttt{mpg \textasciitilde{} wt + cyl}.
+
+\begin{verbatim}
+## 
+## Call:
+## lm(formula = mpg ~ wt + cyl, data = mtcars)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -4.2893 -1.5512 -0.4684  1.5743  6.1004 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  39.6863     1.7150  23.141  < 2e-16 ***
+## wt           -3.1910     0.7569  -4.216 0.000222 ***
+## cyl          -1.5078     0.4147  -3.636 0.001064 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 2.568 on 29 degrees of freedom
+## Multiple R-squared:  0.8302, Adjusted R-squared:  0.8185 
+## F-statistic: 70.91 on 2 and 29 DF,  p-value: 6.809e-12
+\end{verbatim}
+
+Finally, we run some diagnostics for the final model (see the last
+figure in the Appendix). Both from diagnostic plots and calculated
+\texttt{PRESS = resid / (1 - hatvalues)} values we see that
+\texttt{Toyota Corolla}, \texttt{Fiat 128} and
+\texttt{Chrysler Imperial} are outliers. This does not mean that there
+is something wrong with the data, simply MPG for these cars are not
+correctly explained by our model.
+
+\section{Conclusions}\label{conclusions}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  There is a significant difference in MPG depending on transmission
+  type. Cars with automatic tranmission have lower MPG than cars with
+  manual transmission.
+\item
+  The best linear model for MPG that we managed to come up did not
+  include transmission type as a predictor. This model did include car
+  weight and number of cylinders as regressors. It is highly possible
+  that transmission exerts its influence via car weight.
+\item
+  Without linear model with transmission type as a regressor there is no
+  way to quantify its influence on MPG.
+\end{enumerate}
+
+\section{Appendix}\label{appendix}
+
+\includegraphics{mtcars_files/figure-latex/unnamed-chunk-11-1.pdf}
+
+\includegraphics{mtcars_files/figure-latex/unnamed-chunk-12-1.pdf}
+
+\includegraphics{mtcars_files/figure-latex/unnamed-chunk-13-1.pdf}
+
+\includegraphics{mtcars_files/figure-latex/unnamed-chunk-14-1.pdf}
+
+\includegraphics{mtcars_files/figure-latex/unnamed-chunk-15-1.pdf}
+\includegraphics{mtcars_files/figure-latex/unnamed-chunk-15-2.pdf}
+\includegraphics{mtcars_files/figure-latex/unnamed-chunk-15-3.pdf}
+\includegraphics{mtcars_files/figure-latex/unnamed-chunk-15-4.pdf}
+
+\end{document}
